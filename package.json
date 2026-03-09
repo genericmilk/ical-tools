@@ -1,0 +1,19 @@
+{
+  "name": "ical-tools",
+  "version": "1.0.0",
+  "description": "CLI tools for iCal (.ics) files: coverage and compare",
+  "type": "module",
+  "bin": {
+    "ical-coverage": "./ical-coverage.js",
+    "ical-compare": "./ical-compare.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-ical": "^0.25.5"
+  }
+}
