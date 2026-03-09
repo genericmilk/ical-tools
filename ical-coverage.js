@@ -70,7 +70,9 @@ const data = ical.sync.parseFile(filePath);
 
 // Accumulate duration in minutes per event summary
 const durations = {};
+const counts = {};
 let totalMinutes = 0;
+let totalEvents = 0;
 
 for (const key of Object.keys(data)) {
   const event = data[key];
@@ -83,7 +85,8 @@ for (const key of Object.keys(data)) {
   const startDate = new Date(start);
   const endDate = new Date(end);
 
-  if (filterFrom && startDate < filterFrom) continue;
+  // Use overlap: include any event whose duration intersects the filter range
+  if (filterFrom && endDate <= filterFrom) continue;
   if (filterTo && startDate >= filterTo) continue;
 
   const minutes = (endDate - startDate) / 60000;
@@ -91,7 +94,9 @@ for (const key of Object.keys(data)) {
 
   const name = event.summary || '(no title)';
   durations[name] = (durations[name] || 0) + minutes;
+  counts[name] = (counts[name] || 0) + 1;
   totalMinutes += minutes;
+  totalEvents++;
 }
 
 if (totalMinutes === 0) {
@@ -101,7 +106,7 @@ if (totalMinutes === 0) {
 
 // Sort by duration descending
 const rows = Object.entries(durations)
-  .map(([name, mins]) => ({ name, mins, pct: (mins / totalMinutes) * 100 }))
+  .map(([name, mins]) => ({ name, mins, pct: (mins / totalMinutes) * 100, count: counts[name] }))
   .sort((a, b) => b.pct - a.pct);
 
 function formatPct(pct) {
@@ -118,28 +123,30 @@ function formatHours(mins) {
 const nameHeader = 'Event';
 const pctHeader = 'Coverage';
 const hoursHeader = 'Hours';
+const countHeader = 'Count';
 
 const maxName = Math.max(nameHeader.length, ...rows.map(r => r.name.length));
 const maxPct = Math.max(pctHeader.length, ...rows.map(r => formatPct(r.pct).length));
 const maxHours = Math.max(hoursHeader.length, ...rows.map(r => formatHours(r.mins).length));
+const maxCount = Math.max(countHeader.length, ...rows.map(r => String(r.count).length));
 
-function row(name, pct, hours) {
-  return `| ${name.padEnd(maxName)} | ${pct.padStart(maxPct)} | ${hours.padStart(maxHours)} |`;
+function row(name, pct, hours, count) {
+  return `| ${name.padEnd(maxName)} | ${pct.padStart(maxPct)} | ${hours.padStart(maxHours)} | ${count.padStart(maxCount)} |`;
 }
 
 function divider() {
-  return `+-${'-'.repeat(maxName)}-+-${'-'.repeat(maxPct)}-+-${'-'.repeat(maxHours)}-+`;
+  return `+-${'-'.repeat(maxName)}-+-${'-'.repeat(maxPct)}-+-${'-'.repeat(maxHours)}-+-${'-'.repeat(maxCount)}-+`;
 }
 
 console.log();
 if (filterLabel) console.log(`  Showing: ${filterLabel}`);
 console.log(divider());
-console.log(row(nameHeader, pctHeader, hoursHeader));
+console.log(row(nameHeader, pctHeader, hoursHeader, countHeader));
 console.log(divider());
 for (const r of rows) {
-  console.log(row(r.name, formatPct(r.pct), formatHours(r.mins)));
+  console.log(row(r.name, formatPct(r.pct), formatHours(r.mins), String(r.count)));
 }
 console.log(divider());
 console.log();
-console.log(`Total tracked: ${formatHours(totalMinutes)} across ${rows.length} event type(s)`);
+console.log(`Total tracked: ${formatHours(totalMinutes)} across ${rows.length} event type(s), ${totalEvents} event(s) total`);
 console.log();
